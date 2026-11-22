@@ -1,13 +1,13 @@
 {
-  "name": "ヤッホー！タップエコー",
-  "short_name": "ヤッホー！",
-  "description": "画面をタップすると気持ちの良いアニメーションとともにヤッホー！の音声が響くインタラクティブアプリ",
+  "name": "ヤッホー！おととかたちの ちいくあそび",
+  "short_name": "ヤッホー知育",
+  "description": "目にやさしい有機ELデザインで、いろ・かたち・かず・おとの変化をゆっくり学べる子ども向け知育PWA",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#2f80ed",
-  "theme_color": "#2f80ed",
+  "background_color": "#050608",
+  "theme_color": "#050608",
   "icons": [
     {
       "src": "./icon-192.png",
