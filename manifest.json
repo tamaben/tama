@@ -1,0 +1,25 @@
+{
+  "name": "ヤッホー！タップエコー",
+  "short_name": "ヤッホー！",
+  "description": "画面をタップすると気持ちの良いアニメーションとともにヤッホー！の音声が響くインタラクティブアプリ",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2f80ed",
+  "theme_color": "#2f80ed",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

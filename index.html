@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>ヤッホー！タップエコー</title>
+
+  <!-- PWA / iOS / Android メタタグ -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#2f80ed" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ヤッホー！" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: manipulation;
+      font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", "Meiryo", system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 35%, #56ccf2 0%, #2f80ed 55%, #1b4f9c 100%);
+      transition: background 0.6s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    body.theme-sunset {
+      background: radial-gradient(circle at 50% 35%, #ff9a76 0%, #ff5e7e 52%, #592568 100%);
+    }
+
+    body.theme-aurora {
+      background: radial-gradient(circle at 50% 35%, #2af598 0%, #009efd 50%, #161b40 100%);
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    .hud {
+      position: fixed;
+      top: calc(16px + env(safe-area-inset-top));
+      right: calc(16px + env(safe-area-inset-right));
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      transition: transform 0.15s ease, background 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .btn:active {
+      transform: scale(0.94);
+    }
+
+    .btn-install {
+      background: rgba(255, 255, 255, 0.92);
+      color: #1b4f9c;
+      border-color: #fff;
+      display: none;
+    }
+
+    .hint {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+      text-align: center;
+      padding: 24px;
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+
+    .hint.hidden {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+
+    .hint-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      backdrop-filter: blur(6px);
+    }
+
+    .hint-title {
+      color: #fff;
+      font-size: clamp(28px, 6vw, 48px);
+      font-weight: 900;
+      text-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+      letter-spacing: 0.04em;
+      margin-bottom: 10px;
+    }
+
+    .hint-sub {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: clamp(14px, 2.8vw, 17px);
+      font-weight: 600;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .counter {
+      position: fixed;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      left: calc(18px + env(safe-area-inset-left));
+      z-index: 20;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.18);
+      padding: 6px 12px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .pwa-status {
+      position: fixed;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      right: calc(18px + env(safe-area-inset-right));
+      z-index: 20;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.16);
+      padding: 5px 10px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .warning-banner {
+      position: fixed;
+      bottom: calc(56px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(20, 25, 40, 0.88);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 90vw;
+      text-align: center;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="fxCanvas"></canvas>
+
+  <div class="hud" id="hud">
+    <button class="btn btn-install" id="installBtn" type="button">アプリをインストール</button>
+    <button class="btn" id="echoToggleBtn" type="button">やまびこエコー: ON</button>
+    <button class="btn" id="themeBtn" type="button">背景: 青空エコー</button>
+  </div>
+
+  <div class="hint" id="hint">
+    <div class="hint-badge">TAP ANYWHERE</div>
+    <div class="hint-title">画面をタップ！</div>
+    <div class="hint-sub">「ヤッホー！」の声と波紋が広がります</div>
+  </div>
+
+  <div class="counter" id="counter">タップ回数: 0</div>
+  <div class="pwa-status" id="pwaStatus">PWA準備中...</div>
+  <div class="warning-banner" id="warningBanner"></div>
+
+  <audio id="voiceAudio" src="./Mくん-2026-11-22-16-27-ヤッホー。.mp3" preload="auto"></audio>
+
+  <script>
+    const AUDIO_FILE = "./Mくん-2026-11-22-16-27-ヤッホー。.mp3";
+    const canvas = document.getElementById("fxCanvas");
+    const ctx = canvas.getContext("2d");
+    const hintEl = document.getElementById("hint");
+    const counterEl = document.getElementById("counter");
+    const echoToggleBtn = document.getElementById("echoToggleBtn");
+    const themeBtn = document.getElementById("themeBtn");
+    const installBtn = document.getElementById("installBtn");
+    const pwaStatusEl = document.getElementById("pwaStatus");
+    const warningBanner = document.getElementById("warningBanner");
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+    // Service Worker Registration
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("./sw.js")
+          .then(() => {
+            pwaStatusEl.textContent = "オフライン対応済 (PWA)";
+          })
+          .catch(() => {
+            pwaStatusEl.textContent = "ローカル表示モード";
+          });
+      });
+    } else {
+      pwaStatusEl.textContent = "通常モード";
+    }
+
+    // Install Prompt (Android / Desktop Chrome / Edge)
+    let deferredPrompt = null;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = "inline-block";
+    });
+
+    installBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBtn.style.display = "none";
+    });
+
+    let width = (canvas.width = window.innerWidth * devicePixelRatio);
+    let height = (canvas.height = window.innerHeight * devicePixelRatio);
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+
+    window.addEventListener("resize", () => {
+      width = canvas.width = window.innerWidth * devicePixelRatio;
+      height = canvas.height = window.innerHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    });
+
+    // State
+    let tapCount = 0;
+    let echoEnabled = true;
+    const themes = [
+      { id: "sky", label: "青空エコー", className: "", color: "#2f80ed" },
+      { id: "sunset", label: "朝焼け山頂", className: "theme-sunset", color: "#ff5e7e" },
+      { id: "aurora", label: "オーロラ彩光", className: "theme-aurora", color: "#009efd" }
+    ];
+    let themeIndex = 0;
+
+    echoToggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      echoEnabled = !echoEnabled;
+      echoToggleBtn.textContent = echoEnabled ? "やまびこエコー: ON" : "原音そのまま: OFF";
+    });
+
+    themeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      themeIndex = (themeIndex + 1) % themes.length;
+      document.body.className = themes[themeIndex].className;
+      themeBtn.textContent = `背景: ${themes[themeIndex].label}`;
+      if (themeMeta) themeMeta.setAttribute("content", themes[themeIndex].color);
+    });
+
+    // Web Audio API + HTMLAudioElement fallback
+    let audioCtx = null;
+    let audioBuffer = null;
+    let dryGain = null;
+    let delayNode = null;
+    let feedbackGain = null;
+    let wetGain = null;
+    let useHtmlAudioFallback = false;
+
+    async function initAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+
+        dryGain = audioCtx.createGain();
+        dryGain.gain.value = 1.0;
+
+        delayNode = audioCtx.createDelay(2.0);
+        delayNode.delayTime.value = 0.24;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 2600;
+
+        feedbackGain = audioCtx.createGain();
+        feedbackGain.gain.value = 0.42;
+
+        wetGain = audioCtx.createGain();
+        wetGain.gain.value = echoEnabled ? 0.55 : 0.0;
+
+        dryGain.connect(audioCtx.destination);
+        delayNode.connect(filter);
+        filter.connect(feedbackGain);
+        feedbackGain.connect(delayNode);
+        filter.connect(wetGain);
+        wetGain.connect(audioCtx.destination);
+      }
+
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+
+      if (!audioBuffer && !useHtmlAudioFallback) {
+        try {
+          const res = await fetch(AUDIO_FILE);
+          if (!res.ok) throw new Error("Fetch failed");
+          const arrayBuf = await res.arrayBuffer();
+          audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+        } catch (err) {
+          useHtmlAudioFallback = true;
+        }
+      }
+    }
+
+    function playVoice() {
+      if (audioBuffer && audioCtx) {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        wetGain.gain.setTargetAtTime(echoEnabled ? 0.55 : 0.0, audioCtx.currentTime, 0.01);
+
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuffer;
+        if (echoEnabled) {
+          src.playbackRate.value = 0.98 + Math.random() * 0.05;
+        }
+        src.connect(dryGain);
+        if (echoEnabled) {
+          src.connect(delayNode);
+        }
+        src.start(0);
+      } else {
+        const a = new Audio(AUDIO_FILE);
+        a.play().catch(() => {
+          warningBanner.style.display = "block";
+          warningBanner.textContent = "音声ファイル「Mくん-2026-11-22-16-27-ヤッホー。.mp3」を index.html と同じフォルダに置いた状態で開いてください。";
+        });
+
+        if (echoEnabled) {
+          setTimeout(() => {
+            const e1 = new Audio(AUDIO_FILE);
+            e1.volume = 0.4;
+            e1.play().catch(() => {});
+          }, 230);
+          setTimeout(() => {
+            const e2 = new Audio(AUDIO_FILE);
+            e2.volume = 0.18;
+            e2.play().catch(() => {});
+          }, 460);
+        }
+      }
+    }
+
+    // Visual Effects
+    const ripples = [];
+    const particles = [];
+    const floatingTexts = [];
+    const palette = ["#ffffff", "#fff3b0", "#a0f0ed", "#ffd6e0", "#caffbf", "#bdb2ff"];
+    const words = ["ヤッホー！", "ヤッホー♪", "ヤッホー✨", "YAHOO!"];
+
+    function spawnEffects(x, y) {
+      for (let i = 0; i < 3; i++) {
+        ripples.push({
+          x,
+          y,
+          radius: 8 + i * 10,
+          maxRadius: 150 + i * 55 + Math.random() * 30,
+          alpha: 0.9 - i * 0.2,
+          lineWidth: 4.5 - i * 1.1,
+          speed: 4.2 + i * 0.6,
+          color: palette[Math.floor(Math.random() * palette.length)]
+        });
+      }
+
+      const count = 22;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.3;
+        const speed = 2.5 + Math.random() * 6.5;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.2,
+          size: 3 + Math.random() * 5.5,
+          alpha: 1,
+          decay: 0.018 + Math.random() * 0.015,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          shape: Math.random() > 0.45 ? "circle" : "star"
+        });
+      }
+
+      floatingTexts.push({
+        x,
+        y: y - 12,
+        vy: -2.4,
+        scale: 0.3,
+        targetScale: 1.0 + Math.random() * 0.25,
+        rotation: (Math.random() - 0.5) * 0.32,
+        alpha: 1,
+        text: words[Math.floor(Math.random() * words.length)]
+      });
+    }
+
+    function drawStar(cx, cy, spikes, outerR, innerR) {
+      let rot = (Math.PI / 2) * 3;
+      let step = Math.PI / spikes;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - outerR);
+      for (let i = 0; i < spikes; i++) {
+        ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+        rot += step;
+        ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
+        rot += step;
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const r = ripples[i];
+        r.radius += r.speed;
+        r.speed *= 0.975;
+        r.alpha -= 0.015;
+        if (r.alpha <= 0 || r.radius >= r.maxRadius) {
+          ripples.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = r.color;
+        ctx.globalAlpha = Math.max(0, r.alpha);
+        ctx.lineWidth = r.lineWidth;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.14;
+        p.vx *= 0.97;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        if (p.shape === "star") {
+          drawStar(p.x, p.y, 4, p.size * 1.4, p.size * 0.55);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const t = floatingTexts[i];
+        t.y += t.vy;
+        t.vy *= 0.96;
+        t.scale += (t.targetScale - t.scale) * 0.22;
+        t.alpha -= 0.016;
+        if (t.alpha <= 0) {
+          floatingTexts.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.rotation);
+        ctx.scale(t.scale, t.scale);
+        ctx.globalAlpha = Math.max(0, t.alpha);
+        ctx.font = '900 32px "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = "rgba(18, 42, 86, 0.35)";
+        ctx.strokeText(t.text, 0, 0);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(t.text, 0, 0);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    async function handleTrigger(x, y) {
+      tapCount++;
+      counterEl.textContent = `タップ回数: ${tapCount}`;
+      if (tapCount === 1) {
+        hintEl.classList.add("hidden");
+      }
+      spawnEffects(x, y);
+      await initAudio();
+      playVoice();
+    }
+
+    window.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("#hud")) return;
+      handleTrigger(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initAudio().catch(() => {});
+    });
+  </script>
+</body>
+</html>
