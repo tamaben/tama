@@ -1,14 +1,11 @@
-const CACHE_NAME = "yahho-edu-oled-v5";
+const CACHE_NAME = "yahho-pwa-v1";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
-  "./Mくん-2026-11-22-16-27-ヤッホー。.mp3",
-  "./Mくん-2026-11-22-16-50-タップできるかなー？.mp3",
-  "./Mくん-2026-11-22-16-47-すごいね！。.mp3",
-  "./Mくん-2026-11-22-16-50-またちょうせんしてね！。.mp3"
+  "./Mくん-2026-11-22-16-27-ヤッホー。.mp3"
 ];
 
 self.addEventListener("install", (event) => {
